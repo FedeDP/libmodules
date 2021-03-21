@@ -1,46 +1,35 @@
 #pragma once
 
-#include "module_cmn.h"
+#ifndef LIBMODULE_STRUCT_H
+    #define LIBMODULE_STRUCT_H
+#endif
+#include "cmn.h"
 
 /** Queue interface **/
 
-typedef enum {
-    QUEUE_WRONG_PARAM = -4,
-    QUEUE_MISSING,
-    QUEUE_ERR,
-    QUEUE_OMEM,
-    QUEUE_OK
-} queue_ret_code;
-
 /* Callback for queue_iterate */
-typedef queue_ret_code (*queue_cb)(void *, void *);
+typedef int (*m_queue_cb)(void *, void *);
 
 /* Fn for queue_set_dtor */
-typedef void (*queue_dtor)(void *);
+typedef void (*m_queue_dtor)(void *);
 
 /* Incomplete struct declaration for queue */
-typedef struct _queue queue_t;
+typedef struct _queue m_queue_t;
 
 /* Incomplete struct declaration for queue iterator */
-typedef struct _queue_itr queue_itr_t;
+typedef struct _queue_itr m_queue_itr_t;
 
-#ifdef __cplusplus
-extern "C"{
-#endif
-    
-    _public_ queue_t *queue_new(const queue_dtor fn);
-    _public_ queue_itr_t *queue_itr_new(const queue_t *q);
-    _public_ queue_itr_t *queue_itr_next(queue_itr_t *itr);
-    _public_ void *queue_itr_get_data(const queue_itr_t *itr);
-    _public_ queue_ret_code queue_itr_set_data(const queue_itr_t *itr, void *value);
-    _public_ queue_ret_code queue_iterate(const queue_t *q, const queue_cb fn, void *userptr);
-    _public_ queue_ret_code queue_enqueue(queue_t *q, void *data);
-    _public_ void *queue_dequeue(queue_t *q);
-    _public_ void *queue_peek(const queue_t *q);
-    _public_ queue_ret_code queue_clear(queue_t *q);
-    _public_ queue_ret_code queue_free(queue_t *q);
-    _public_ ssize_t queue_length(const queue_t *q);
-    
-#ifdef __cplusplus
-}
-#endif
+m_queue_t *m_queue_new(m_queue_dtor fn);
+m_queue_itr_t *m_queue_itr_new(const m_queue_t *q);
+int m_queue_itr_next(m_queue_itr_t **itr);
+int m_queue_itr_remove(m_queue_itr_t *itr);
+void *m_queue_itr_get_data(const m_queue_itr_t *itr);
+int m_queue_itr_set_data(const m_queue_itr_t *itr, void *value);
+int m_queue_iterate(const m_queue_t *q, m_queue_cb fn, void *userptr);
+int m_queue_enqueue(m_queue_t *q, void *data);
+void *m_queue_dequeue(m_queue_t *q);
+void *m_queue_peek(const m_queue_t *q);
+int m_queue_remove(m_queue_t *q);
+int m_queue_clear(m_queue_t *q);
+int m_queue_free(m_queue_t **q);
+ssize_t m_queue_len(const m_queue_t *q);

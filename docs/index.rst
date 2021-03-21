@@ -11,16 +11,16 @@ Welcome to libmodule's documentation!
    :caption: Contents:
 
    src/concepts
-   src/data_structures
    src/callbacks
    src/lifecycle
-   src/memory
+   src/easy
    src/pubsub
-   src/module
-   src/modules
+   src/mod
+   src/ctx
    src/map
    src/stack
    src/queue
+   src/list
 
 Indices and tables
 ==================

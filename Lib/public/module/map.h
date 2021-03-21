@@ -1,51 +1,42 @@
 #pragma once
 
-#include "module_cmn.h"
+#ifndef LIBMODULE_STRUCT_H
+    #define LIBMODULE_STRUCT_H
+#endif
+#include "cmn.h"
 
 /** Hashmap interface **/
 
-typedef enum {
-    MAP_EPERM = -6,
-    MAP_WRONG_PARAM,
-    MAP_ERR,
-    MAP_MISSING,
-    MAP_FULL,
-    MAP_OMEM,
-    MAP_OK
-} map_ret_code;
-
-/* Callback for map_iterate */
-typedef map_ret_code (*map_cb)(void *, const char *, void *);
+/* Callback for map_iterate; first parameter is userdata, second and third are {key,value} tuple */
+typedef int (*m_map_cb)(void *, const char *, void *);
 
 /* Fn for map_set_dtor */
-typedef void (*map_dtor)(void *);
+typedef void (*m_map_dtor)(void *);
 
 /* Incomplete struct declaration for hashmap */
-typedef struct _map map_t;
+typedef struct _map m_map_t;
 
 /* Incomplete struct declaration for hashmap iterator */
-typedef struct _map_itr map_itr_t;
+typedef struct _map_itr m_map_itr_t;
 
-#ifdef __cplusplus
-extern "C"{
-#endif
+typedef enum {
+    M_MAP_KEY_DUP           = 0x01,         // Should map keys be dupped?
+    M_MAP_KEY_AUTOFREE      = 0x02,         // Should map keys be freed automatically?
+    M_MAP_VAL_ALLOW_UPDATE  = 0X04          // Does map object allow for updating values?
+} m_map_flags;
 
-_public_ map_t *map_new(const bool keysdup, const map_dtor fn);
-_public_ map_itr_t *map_itr_new(const map_t *m);
-_public_ map_itr_t *map_itr_next(map_itr_t *itr);
-_public_ map_ret_code map_itr_remove(map_itr_t *itr);
-_public_ const char *map_itr_get_key(const map_itr_t *itr);
-_public_ void *map_itr_get_data(const map_itr_t *itr);
-_public_ map_ret_code map_itr_set_data(const map_itr_t *itr, void *value);
-_public_ map_ret_code map_iterate(map_t *m, const map_cb fn, void *userptr);
-_public_ map_ret_code map_put(map_t *m, const char *key, void *value);
-_public_ void *map_get(const map_t *m, const char *key);
-_public_ bool map_has_key(const map_t *m, const char *key);
-_public_ map_ret_code map_remove(map_t *m, const char *key);
-_public_ map_ret_code map_clear(map_t *m);
-_public_ map_ret_code map_free(map_t *m);
-_public_ ssize_t map_length(const map_t *m);
-
-#ifdef __cplusplus
-}
-#endif
+m_map_t *m_map_new(m_map_flags flags, m_map_dtor fn);
+m_map_itr_t *m_map_itr_new(const m_map_t *m);
+int m_map_itr_next(m_map_itr_t **itr);
+int m_map_itr_remove(m_map_itr_t *itr);
+const char *m_map_itr_get_key(const m_map_itr_t *itr);
+void *m_map_itr_get_data(const m_map_itr_t *itr);
+int m_map_itr_set_data(const m_map_itr_t *itr, void *value);
+int m_map_iterate(m_map_t *m, m_map_cb fn, void *userptr);
+int m_map_put(m_map_t *m, const char *key, void *value);
+void *m_map_get(const m_map_t *m, const char *key);
+bool m_map_contains(const m_map_t *m, const char *key);
+int m_map_remove(m_map_t *m, const char *key);
+int m_map_clear(m_map_t *m);
+int m_map_free(m_map_t **m);
+ssize_t m_map_len(const m_map_t *m);

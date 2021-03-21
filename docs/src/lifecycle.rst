@@ -8,54 +8,56 @@ Lifecycle
 Easy API
 --------
 
-We previously saw that every module has to expose at least 5 functions. |br|
+We previously saw that every module exposes a set of callbacks. |br|
 We will now go deeper, better understanding a module's lifecycle. |br|
-First of all, module lifecycle is automatically managed by libmodule; moreover, when using :ref:`module_easy`,
+First of all, module lifecycle is automatically managed by libmodule; moreover, when using :ref:`easy` API,
 module registration/deregistration is completely automated and transparent to developer. |br|
-This means that when using easy API (or multicontext API), you will only have to declare a source file as a module and define needed functions. |br|
+This means that when using it, you will only have to declare a source file as a module and define needed functions. |br|
 
-Before any module is registered into libmodule, each module's module_pre_start() function is called. |br|
-This function can be useful to set each module pre-starting state: this may be needed if any check() function depends on some global state (eg: as read by config file). |br|
+First function to be called is m_ctx_pre_start(); it is called before any module is registered, and it is the global version of m_mod_pre_start(). |br|
+Then, each module's m_mod_pre_start() function is called. At this stage, no module is registered yet. |br|
 
-After every module_pre_start() function is called, libmodule will start checking which module needs to be registered, eventually registering them. |br|
-For every module, check() function will be called; if and only if that function returns true, the module will be registered. |br|
-An unregistered module is just dead code; none of its functions will ever be called. |br|
-Once a module is registered, it will be initially set to an IDLE state. Idle means that the module is not started yet, thus it cannot receive any PubSub msg nor any event from fds. |br|
+After every m_mod_pre_start() function is called, libmodule will register every module. |br|
+Once a module is registered, it will be initially set to an M_MOD_IDLE state. Idle means that the module is not started yet, thus it cannot receive any event. |br|
 
-As soon as its context starts looping, a module's evaluate() function will be called, trying to start it right away. |br|
-Evaluate() will be then called at each state machine change, for each idle module. |br|
+As soon as its context starts looping, m_mod_on_eval() function will be called on every M_MOD_IDLE module, trying to start it right away. |br|
+m_mod_on_eval() will be then called at each state machine change, for each idle module, until it returns true. |br|
 
-As soon as module's evaluate() returns true, the module is started. It means its init() function is finally called and its state is set to RUNNING. |br|
-A single module can poll on multiple fds: just call module_register_fd() multiple times. |br|
-When a module reaches RUNNING state, modules_loop()/modules_ctx_loop() functions will finally receive events from its fds. |br|
+As soon as m_mod_on_eval() returns true, a module is started. It means its m_mod_on_start() function is finally called and its state is set to M_MOD_RUNNING. |br|
+When a module reaches RUNNING state, its context loop will finally receive events for its registered sources. |br|
 
-Whenever an event triggers on a module's fd, or the module receives a PubSub message from another one, its receive() callback is called. |br|
-Receive callback will receive userdata too as parameter, as set by module_set_userdata().
+Whenever an event triggers a module's wakeup, its m_mod_on_evt() callback is called. |br|
 
-Finally, when leaving program, each module's destroy() function is automatically called during the process of automatic module's deregistration. |br|
+Finally, when stopping a module, each module's m_mod_on_stop() function is called. |br|
+Note that a module is automatically stopped during the process of module's deregistration. |br|
 
-Complex API
+Thus, for Easy API, you should only implement m_mod_on_eval() to return true when it is ready to be started, |br|
+then eventually register event sources in m_mod_on_start(), and manage events in m_mod_on_evt(). |br|
+If you need to cleanup any data, manage it in m_mod_on_stop(). |br|
+
+Normal API
 -----------
 
-When dealing with libmodule's :ref:`module_complex`, no modules is automatically started for you, ie: you must manually call module_register()/module_deregister() on each module. |br|
-When using complex API, you are responsible to register/deregister modules, and thus initing/destroying them. |br|
-Note that with Complex API, module_pre_start() function is not available (it would be useless), and you won't need to define check() function. |br|
-You will still have to define evaluate(), init(), receive() and destroy() functions (but you can freely name them!). |br|
-
-Everything else but module's (de)registration is same as Easy API.
+When dealing with libmodule's normal API, no context nor module is automatically registered for you, ie: you must manually call m_{ctx,mod}_(de)register() API. |br|
+In normal API, you are responsible to register/deregister modules and contexts. |br|
+Ideally, a context is registered and some modules are registered in it. Then, m_ctx_loop() gets called on the context, eventually starting any registered module. |br|
+Note that a context will automatically stop looping when there are no M_MOD_RUNNING modules in it anymore. |br|
 
 Module States
 -------------
 
-As previously mentioned, a registered module, before being started, is in IDLE state. |br|
-IDLE state means that it has still no source of events; it won't receive any PubSub message and even if it registers any fd, they won't be polled. |br|
-When module is started, thus reaching RUNNING state, all its registered fds will start being polled; moreover, it can finally receive PubSub messages. Fds registered while in RUNNING state, are automatically polled. |br|
-If a module is PAUSED, it will stop polling on its fds and PubSub messages, but PubSub messages will still be queued on its write end of pipe. Thus, as soon as module is resumed, all PubSub messages received during PAUSED state will trigger receive() callback. |br|
-If a module gets STOPPED, it will stop polling on its fds and PubSub messages, and every autoclose fd will be closed. Moreover, all its registered fds are freed and its enqueued pubsub messages are destroyed. |br|
-STOPPED state is the same as IDLE state, but it means that module was started at least once and module's init() callback has already been called. |br|
-If you instead wish to stop a module letting it receive any enqueued pubsub message, you need to send a POISONPILL message to it, through module_poisonpill() function. |br|
+As previously mentioned, a registered module, before being started, is in M_MOD_IDLE state. |br|
+M_MOD_IDLE state means that it has never been started before; it won't receive any event thus its m_evt_cb will never be called. |br|
+When module is started, thus reaching M_MOD_RUNNING state, all its registered sources will finally start to receive events. Sources registered while in M_MOD_RUNNING state are automatically polled. |br|
+If a module is paused, reaching M_MOD_PAUSED state, it will stop polling on its event sources, but event sources will still be alive, just not polled. Thus, as soon as module is resumed, all events received during PAUSED state will trigger m_evt_cb. |br|
+If a module gets stopped, reaching M_MOD_STOPPED state, it will destroy any registered source and it will be resetted to its initial state. |br|
+If you instead wish to stop a module letting it manage any already-enqueued event, you need to send a POISONPILL message to it, through m_mod_poisonpill() function. |br|
+The difference between M_MOD_IDLE and M_MOD_STOPPED states is that M_MOD_IDLE modules will be evaluated to be started during context loop, while M_MOD_STOPPED modules won't. |br|
+When a module is deregistered, it will reach a final M_MOD_ZOMBIE state. It means that the module is no more reachable neither usable, but it can still be referenced by any previously sent message (or any m_mod_ref()). |br|
+After all module's sent messages are received by respective recipients, module will finally be destroyed and its memory freed, unless there still is any m_mod_unref() to be called on it. |br|
+You can only call m_mod_is(), m_mod_name() and m_mod_ctx() on a ZOMBIE module. |br|
 
-module_start() needs to be called on a IDLE or STOPPED module. |br|
-module_pause() needs to be called on a RUNNING module. |br|
-module_resume() needs to  be called on a PAUSED module. |br|
-module_stop() needs to be called on a RUNNING or PAUSED module.
+m_mod_start() needs to be called on an M_MOD_IDLE or M_MOD_STOPPED module. |br|
+m_mod_pause() needs to be called on a M_MOD_RUNNING module. |br|
+m_mod_resume() needs to  be called on a M_MOD_PAUSED module. |br|
+m_mod_stop() needs to be called on a M_MOD_RUNNING or M_MOD_PAUSED module. |br|

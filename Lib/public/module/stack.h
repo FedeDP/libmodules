@@ -1,46 +1,35 @@
 #pragma once
 
-#include "module_cmn.h"
+#ifndef LIBMODULE_STRUCT_H
+    #define LIBMODULE_STRUCT_H
+#endif
+#include "cmn.h"
 
 /** Stack interface **/
 
-typedef enum {
-    STACK_WRONG_PARAM = -4,
-    STACK_MISSING,
-    STACK_ERR,
-    STACK_OMEM,
-    STACK_OK
-} stack_ret_code;
-
 /* Callback for stack_iterate */
-typedef stack_ret_code (*stack_cb)(void *, void *);
+typedef int (*m_stack_cb)(void *, void *);
 
 /* Fn for stack_set_dtor */
-typedef void (*stack_dtor)(void *);
+typedef void (*m_stack_dtor)(void *);
 
 /* Incomplete struct declaration for stack */
-typedef struct _stack stack_t;
+typedef struct _stack m_stack_t;
 
 /* Incomplete struct declaration for stack iterator */
-typedef struct _stack_itr stack_itr_t;
+typedef struct _stack_itr m_stack_itr_t;
 
-#ifdef __cplusplus
-extern "C"{
-#endif
-
-_public_ stack_t *stack_new(const stack_dtor fn);
-_public_ stack_itr_t *stack_itr_new(const stack_t *s);
-_public_ stack_itr_t *stack_itr_next(stack_itr_t *itr);
-_public_ void *stack_itr_get_data(const stack_itr_t *itr);
-_public_ stack_ret_code stack_itr_set_data(const stack_itr_t *itr, void *value);
-_public_ stack_ret_code stack_iterate(const stack_t *s, const stack_cb fn, void *userptr);
-_public_ stack_ret_code stack_push(stack_t *s, void *data);
-_public_ void *stack_pop(stack_t *s);
-_public_ void *stack_peek(const stack_t *s);
-_public_ stack_ret_code stack_clear(stack_t *s);
-_public_ stack_ret_code stack_free(stack_t *s);
-_public_ ssize_t stack_length(const stack_t *s);
-
-#ifdef __cplusplus
-}
-#endif
+m_stack_t *m_stack_new(m_stack_dtor fn);
+m_stack_itr_t *m_stack_itr_new(const m_stack_t *s);
+int m_stack_itr_next(m_stack_itr_t **itr);
+int m_stack_itr_remove(m_stack_itr_t *itr);
+void *m_stack_itr_get_data(const m_stack_itr_t *itr);
+int m_stack_itr_set_data(const m_stack_itr_t *itr, void *value);
+int m_stack_iterate(const m_stack_t *s, m_stack_cb fn, void *userptr);
+int m_stack_push(m_stack_t *s, void *data);
+void *m_stack_pop(m_stack_t *s);
+void *m_stack_peek(const m_stack_t *s);
+int m_stack_clear(m_stack_t *s);
+int m_stack_remove(m_stack_t *s);
+int m_stack_free(m_stack_t **s);
+ssize_t m_stack_len(const m_stack_t *s);

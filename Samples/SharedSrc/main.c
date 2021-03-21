@@ -1,7 +1,7 @@
-#include <module/modules_easy.h>
+#include <module/ctx.h>
+#include <module/mod.h>
 
-extern void create_modules(const char *ctx_name);
-extern void destroy_modules(void);
+extern void create_modules(m_ctx_t *c, m_mod_t **modA, m_mod_t **modB);
 
 /*
  * This function is automatically called before initing any module.
@@ -9,26 +9,34 @@ extern void destroy_modules(void);
  * whether to start some module.
  * There is no need to explicitly call it.
  */
-void modules_pre_start() {
+void m_pre_start() {
     printf("Press 'c' to start playing with your own doggo...\n");
 }
 
 int main(int argc, char *argv[]) {
-    /* 
-     * Firstly, create our desired modules.
-     * We will use "test" as new context name.
-     * New context will be created as soon as first module is added to it.
+    /*
+     * Register the context
      */
-    create_modules("test");
+    m_ctx_t *c = NULL;
+    m_ctx_register("SharedSrc", &c, 0, NULL);
 
     /*
-     * Loop on this context to get our modules' events
+     * Create the modules in the context
      */
-    modules_ctx_loop("test");
+    m_mod_t *modA = NULL, *modB = NULL;
+    create_modules(c, &modA, &modB);
+
+    /*
+     * Loop on context to fetch modules' events
+     */
+    m_ctx_loop(c);
     
     /*
-     * Finally, destroy our modules
+     * Finally, destroy our modules.
+     * As context had no M_CTX_PERSIST flag,
+     * it will be automatically destroyed when it has no module in it.
      */
-    destroy_modules();
+    m_mod_deregister(&modA);
+    m_mod_deregister(&modB);
     return 0;
 }

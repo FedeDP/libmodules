@@ -3,20 +3,24 @@ packages:
   - cmocka
   #- valgrind
   - cmake
+  - fusefs-libs3
+  - pkgconf
 sources:
   - https://github.com/FedeDP/libmodule
 tasks:
   - prepare: |
       cd libmodule
-      mkdir build
-      cd build
-      cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=true -DBUILD_SAMPLES=true ../
+      mkdir build build_fs
+      (cd build && cmake -DBUILD_TESTS=true -DBUILD_SAMPLES=true ../)
+      (cd build_fs && cmake -DBUILD_TESTS=true -DBUILD_SAMPLES=true -DWITH_FS=true ..)
   - build: |
-      cd libmodule/build
-      make
+      cd libmodule
+      (cd build && make)
+      (cd build_fs && make)
   - test: |
-      cd libmodule/build
-      ctest -V
+      cd libmodule
+      (cd build && ctest -V)
+      # (cd build_fs && ctest -V) -> This requires fuse module to be loaded
 triggers:
   - action: email
     condition: failure

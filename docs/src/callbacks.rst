@@ -3,53 +3,59 @@
    <br />
 
 Callbacks
-================
+=========
 
-Every module needs 5 functions that must be defined by developer. |br|
-If using :ref:`module_easy`, they are automatically declared by MODULE macro. |br|
-Moreover, a module_pre_start function is declared too, but it is not needed by libmodule interface, ie: it can be left undefined. Your compiler may warn you about that though.
+Every module requires following functions to be defined by developers. |br|
+If using :ref:`easy` API, they are automatically declared by M_MOD() macro. |br|
+Moreover, a m_mod_pre_start function is declared too, but it is not needed by libmodule interface, ie: it can be left undefined. Your compiler may warn you about that though. |br|
+Note that libmodule only mandates m_evt_cb() callback. |br|
+Leaving other callbacks as NULL means starting module right away with no further checks. |br|
 
 .. code::
 
-    static void module_pre_start(void);
-    static void init(void);
-    static bool check(void);
-    static bool evaluate(void);
-    static void receive(const msg_t *const msg, const void *userdata);
-    static void destroy(void);
+    void m_mod_pre_start(void);
+    bool m_start_cb(m_mod_t *mod);
+    bool m_eval_cb(m_mod_t *mod);
+    void m_evt_cb(m_mod_t *mod, const m_evt_t *const evt);
+    void m_stop_cb(m_mod_t *mod);
 
-.. c:function:: module_pre_start(void)
+.. c:function:: m_mod_pre_start(void)
 
   This function will be called before any module is registered. |br|
-  It is the per-module version of :ref:`modules_pre_start <modules_pre_start>` function.
+  It is the per-module version of :ref:`m_ctx_pre_start <m_ctx_pre_start>` function.
 
-.. c:function:: init(void)
+.. c:function:: m_start_cb(mod)
 
-  Initializes module state; useful to register any fd to be polled or to register any topic. |br|
-  Note that init() is only called first time module is started.
+  Initializes module state; useful to register any event source. |br|
+  It is called whenever module is started. |br|
+  If m_mod_on_start callback returns false, module is automatically stopped as its initialization failed.
 
-.. c:function:: check(void)
+  :param: :c:type:`m_mod_t *` mod: pointer to module.
 
-  Startup filter to check whether this module should be actually created and managed by libmodule. |br|
+  :returns: true if the module should be started, false otherwise.
+
+.. c:function:: m_eval_cb(mod)
+
+  This function is called for each IDLE module after evey state machine update, |br|
+  and it should check whether a module is now ready to be started. |br|
+
+  :param: :c:type:`m_mod_t *` mod: pointer to module.
+
+  :returns: true if module is now ready to be started, false otherwise.
   
-  :returns: true if the module should be registered, false otherwise.
+.. c:function:: m_evt_cb(mod, evt)
 
-.. c:function:: evaluate(void)
+  Poll callback, called when any event is ready to be received by a module. |br|
+  Use evt->type to establish which event source triggered the event. |br|
+  Note that evt is memory-ref'd. Thus, if you want to keep a message alive, you are able to m_mem_ref() it. |br|
+  Remember to unref it when done or you will cause a leak. |br|
 
-  Similar to check() function but at runtime: this function is called for each IDLE module after evey state machine update
-  and it should check whether a module is now ready to be start (ie: init should be called on this module and its state should be set to RUNNING).
-  Use this to check intra-modules dependencies or any other env variable.
-  
-  :returns: true if module is now ready to be started, else false.
-  
-.. c:function:: receive(msg, userdata)
+  :param: :c:type:`m_mod_t *` mod: pointer to module.
+  :param: :c:type:`const m_evt_t * const` evt: pointer to event.
 
-  Poll callback, called when any event is ready on module's fd or when a PubSub message is received by a module. |br|
-  Use msg->is_pubsub to decide which internal message should be read (ie: ps_msg_t or fd_msg_t).
-  
-  :param: :c:type:`const msg_t * const` msg: pointer to msg_t struct.
-  :param: :c:type:`const void *` userdata: pointer to userdata as set by m_set_userdata.
+.. c:function:: m_stop_cb(mod)
 
-.. c:function:: destroy(void)
+  Called whenever module gets stopped, either by deregistration or m_mod_stop(). |br|
+  Useful to cleanup module state, eg: freeing some data or closing fds registered without M_SRC_FD_AUTOCLOSE flag. |br|
 
-  Destroys module, called automatically at module deregistration. Please note that module's fds set as autoclose will be closed.
+  :param: :c:type:`m_mod_t *` mod: pointer to module.

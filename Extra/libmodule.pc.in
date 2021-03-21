@@ -8,5 +8,5 @@ Description: @PROJECT_DESCRIPTION@
 Version: @PROJECT_VERSION@
 
 Requires:
-Libs: -L${libdir} -lmodule
-Cflags: -I${includedir}
+Libs: -L${libdir} -lmodule @PKG_DIRS@ @PKG_DEPS@
+Cflags: -I${includedir} @PKG_INCS@

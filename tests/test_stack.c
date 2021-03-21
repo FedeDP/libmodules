@@ -1,7 +1,7 @@
-#include "test_map.h"
-#include <module/stack.h>
+#include "test_stack.h"
+#include <module/itr.h>
 
-static stack_t *my_st;
+static m_stack_t *my_st;
 static int val1 = 1;
 static int val2 = 2;
 static char val3[] = "Hello World";
@@ -10,32 +10,32 @@ void test_stack_push(void **state) {
     (void) state; /* unused */
     
     /* NULL map */
-    stack_ret_code ret = stack_push(my_st, &val1);
-    assert_false(ret == STACK_OK);
+    int ret = m_stack_push(my_st, &val1);
+    assert_false(ret == 0);
     
-    my_st = stack_new(NULL);
+    my_st = m_stack_new(NULL);
     
     /* NULL value */
-    ret = stack_push(my_st, NULL);
-    assert_false(ret == STACK_OK);
+    ret = m_stack_push(my_st, NULL);
+    assert_false(ret == 0);
     
-    ret = stack_push(my_st, &val1);
-    assert_true(ret == STACK_OK);
+    ret = m_stack_push(my_st, &val1);
+    assert_true(ret == 0);
     
-    ret = stack_push(my_st, &val2);
-    assert_true(ret == STACK_OK);
+    ret = m_stack_push(my_st, &val2);
+    assert_true(ret == 0);
     
-    ret = stack_push(my_st, val3);
-    assert_true(ret == STACK_OK);
+    ret = m_stack_push(my_st, val3);
+    assert_true(ret == 0);
 }
 
 void test_stack_peek(void **state) {
     (void) state; /* unused */
     
-    char *v = stack_peek(NULL);
+    char *v = m_stack_peek(NULL);
     assert_null(v);
     
-    v = stack_peek(my_st);
+    v = m_stack_peek(my_st);
     assert_non_null(v);
     assert_string_equal(v, "Hello World");
 }
@@ -43,70 +43,72 @@ void test_stack_peek(void **state) {
 void test_stack_length(void **state) {
     (void) state; /* unused */
     
-    int len = stack_length(NULL);
+    int len = m_stack_len(NULL);
     assert_false(len > 0);
     
-    len = stack_length(my_st);
+    len = m_stack_len(my_st);
     assert_int_equal(len, 3);
 }
 
 void test_stack_iterator(void **state) {
     (void) state; /* unused */
     
-    /* NULL stack */
-    stack_itr_t *itr = stack_itr_new(NULL);
+    /* NULL m_stack */
+    m_stack_itr_t *itr = m_stack_itr_new(NULL);
     assert_null(itr);
     
-    itr = stack_itr_new(my_st);
+    itr = m_itr_new(my_st);
     assert_non_null(itr);
     
-    int count = stack_length(my_st);
+    int count = m_stack_len(my_st);
     while (itr) {
+        printf("%p\n", m_itr_get(itr));
+        if (count % 2 == 0) {
+            m_itr_rm(itr);
+        }
+        m_itr_next(&itr);
         count--;
-        printf("%p\n", stack_itr_get_data(itr));
-        itr = stack_itr_next(itr);
+        
     }
     
     assert_int_equal(count, 0);
+    assert_null(itr);
 }
 
 void test_stack_pop(void **state) {
     (void) state; /* unused */
     
-    void *ptr = stack_pop(NULL);
+    void *ptr = m_stack_pop(NULL);
     assert_null(ptr);
     
-    ptr = stack_pop(my_st);
+    ptr = m_stack_pop(my_st);
     assert_non_null(ptr);
     assert_string_equal(ptr, "Hello World");
     
-    ptr = stack_pop(my_st);
-    assert_non_null(ptr);
-    assert_int_equal(*(int *)ptr, 2);
-    
-    int len = stack_length(my_st);
+    int len = m_stack_len(my_st);
     assert_int_equal(len, 1); // one element left
 }
 
 void test_stack_clear(void **state) {
     (void) state; /* unused */
     
-    stack_ret_code ret = stack_clear(NULL);
-    assert_false(ret == STACK_OK);
+    int ret = m_stack_clear(NULL);
+    assert_false(ret == 0);
     
-    ret = stack_clear(my_st);
-    assert_true(ret == STACK_OK);
+    ret = m_stack_clear(my_st);
+    assert_true(ret == 0);
     
-    int len = stack_length(my_st);
+    int len = m_stack_len(my_st);
     assert_int_equal(len, 0);
 }
 
 void test_stack_free(void **state) {
     (void) state; /* unused */
     
-    stack_ret_code ret = stack_free(NULL);
-    assert_false(ret == STACK_OK);
+    int ret = m_stack_free(NULL);
+    assert_false(ret == 0);
     
-    ret = stack_free(my_st);
-    assert_true(ret == STACK_OK);
+    ret = m_stack_free(&my_st);
+    assert_true(ret == 0);
+    assert_null(my_st);
 }

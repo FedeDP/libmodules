@@ -20,11 +20,11 @@
 # -- Project information -----------------------------------------------------
 
 project = 'libmodule'
-copyright = '2019, Federico Di Pierro'
+copyright = '2020, Federico Di Pierro'
 author = 'Federico Di Pierro'
 
-version = '5.0.1'
-release = '5.0.1'
+version = '6.0.0'
+release = '6.0.0'
 
 highlight_language = "c"
 

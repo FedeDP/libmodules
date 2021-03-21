@@ -1,2 +1,3 @@
-# Exclude compile time module_cmn.h created by cmake config file
-module_cmn.h
+# Exclude compile time created files by cmake
+cmn.h
+fs.h
